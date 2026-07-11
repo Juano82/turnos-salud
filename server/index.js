@@ -599,6 +599,10 @@ if (hasClientBuild) {
   })
 }
 
-app.listen(port, () => {
-  console.log(`API de turnos escuchando en http://localhost:${port}`)
-})
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`API de turnos escuchando en http://localhost:${port}`)
+  })
+}
+
+module.exports = app
