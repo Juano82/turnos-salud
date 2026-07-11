@@ -17,6 +17,16 @@ function dayLabel(day) {
   return DAY_OPTIONS.find((option) => option.value === day)?.label || 'Dia'
 }
 
+function formatAppointmentDay(date, time) {
+  const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado']
+  const parsed = dayjs(`${date}T${time}`)
+  return `${dayNames[parsed.day()]} ${parsed.format('DD/MM/YYYY')}`
+}
+
+function sanitizePhoneForWhatsApp(phone) {
+  return `${phone || ''}`.replace(/\D/g, '')
+}
+
 function AdminPage() {
   const [token, setToken] = useState(localStorage.getItem(ADMIN_TOKEN_KEY) || '')
   const [isAdminConfigured, setIsAdminConfigured] = useState(false)
@@ -380,6 +390,21 @@ function AdminPage() {
     }
   }
 
+  function handleConfirmByWhatsApp(appointment) {
+    const doctorName = appointment.doctor?.name || 'el profesional'
+    const dayText = formatAppointmentDay(appointment.date, appointment.time)
+    const message = `Hola Queremos confirmar tu turno con ${doctorName}, el dia ${dayText}, a las ${appointment.time}.`
+    const phone = sanitizePhoneForWhatsApp(appointment.patientPhone)
+
+    if (!phone) {
+      setError('El numero del paciente no es valido para WhatsApp.')
+      return
+    }
+
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+  }
+
   function handleLogout() {
     localStorage.removeItem(ADMIN_TOKEN_KEY)
     setToken('')
@@ -600,6 +625,65 @@ function AdminPage() {
         {token && (
           <>
             <article className="panel">
+              <h2>Turnos Agendados</h2>
+
+              {loading && <p className="info">Cargando turnos...</p>}
+
+              {!loading && appointments.length === 0 && (
+                <p className="info">No hay turnos cargados.</p>
+              )}
+
+              <ul className="appointment-list">
+                {appointments.map((appointment) => (
+                  <li key={appointment.id}>
+                    <div>
+                      <p className="patient">{appointment.patientName}</p>
+                      <p className="meta">Celular: {appointment.patientPhone}</p>
+                      <p className="meta">
+                        {appointment.doctor?.name} | {appointment.doctor?.specialty}
+                      </p>
+                      <p className="meta">
+                        {dayjs(`${appointment.date}T${appointment.time}`).format(
+                          'DD/MM/YYYY HH:mm',
+                        )}
+                      </p>
+                      {appointment.notes && (
+                        <p className="notes">Observaciones: {appointment.notes}</p>
+                      )}
+                    </div>
+                    <div className="appointment-actions">
+                      <button
+                        type="button"
+                        className="whatsapp-btn"
+                        onClick={() => handleConfirmByWhatsApp(appointment)}
+                      >
+                        <svg
+                          className="whatsapp-icon"
+                          viewBox="0 0 24 24"
+                          role="presentation"
+                          aria-hidden="true"
+                        >
+                          <path
+                            fill="currentColor"
+                            d="M12 2a10 10 0 0 0-8.75 14.84L2 22l5.3-1.23A10 10 0 1 0 12 2zm5.57 14.16c-.24.68-1.38 1.27-1.9 1.35-.49.07-1.12.1-1.81-.12-.42-.14-.96-.31-1.66-.6-2.93-1.27-4.84-4.23-4.99-4.43-.15-.2-1.19-1.58-1.19-3.02 0-1.43.75-2.13 1.02-2.42.27-.3.59-.37.79-.37.2 0 .4 0 .57.01.19.01.44-.07.69.53.24.58.83 2 .9 2.14.07.14.12.3.02.49-.1.2-.15.31-.3.47-.15.17-.31.37-.44.5-.15.14-.3.3-.13.58.17.28.77 1.26 1.65 2.04 1.14 1.01 2.1 1.32 2.4 1.47.3.15.48.12.66-.07.17-.2.74-.87.94-1.17.2-.3.4-.25.68-.15.28.1 1.75.83 2.05.98.3.15.5.22.57.35.07.13.07.75-.17 1.43z"
+                          />
+                        </svg>
+                        Confirmar turno
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => handleCancelAppointment(appointment.id)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="panel">
               <div className="admin-header-row">
                 <h2>Gestion de Medicos</h2>
                 <div className="admin-actions">
@@ -744,45 +828,6 @@ function AdminPage() {
                   </article>
                 ))}
               </div>
-            </article>
-
-            <article className="panel">
-              <h2>Turnos Agendados</h2>
-
-              {loading && <p className="info">Cargando turnos...</p>}
-
-              {!loading && appointments.length === 0 && (
-                <p className="info">No hay turnos cargados.</p>
-              )}
-
-              <ul className="appointment-list">
-                {appointments.map((appointment) => (
-                  <li key={appointment.id}>
-                    <div>
-                      <p className="patient">{appointment.patientName}</p>
-                      <p className="meta">Celular: {appointment.patientPhone}</p>
-                      <p className="meta">
-                        {appointment.doctor?.name} | {appointment.doctor?.specialty}
-                      </p>
-                      <p className="meta">
-                        {dayjs(`${appointment.date}T${appointment.time}`).format(
-                          'DD/MM/YYYY HH:mm',
-                        )}
-                      </p>
-                      {appointment.notes && (
-                        <p className="notes">Observaciones: {appointment.notes}</p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="danger"
-                      onClick={() => handleCancelAppointment(appointment.id)}
-                    >
-                      Cancelar
-                    </button>
-                  </li>
-                ))}
-              </ul>
             </article>
           </>
         )}
