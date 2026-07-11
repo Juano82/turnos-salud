@@ -2,6 +2,12 @@
   "name": "turnos-salud",
   "private": true,
   "version": "1.0.0",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "uuid": "^11.1.0"
+  },
   "scripts": {
     "install:all": "npm --prefix client install && npm --prefix server install",
     "build": "npm --prefix client run build"
