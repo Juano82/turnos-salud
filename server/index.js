@@ -20,6 +20,10 @@ if (process.env.ADMIN_USER && process.env.ADMIN_PASSWORD && process.env.ADMIN_EM
 const ADMIN_SESSION_TTL_MS = 1000 * 60 * 60 * 8
 const adminSessions = new Map()
 
+function cloneData(value) {
+  return JSON.parse(JSON.stringify(value))
+}
+
 app.use(cors())
 app.use(express.json())
 
@@ -62,7 +66,7 @@ const defaultDoctors = [
   },
 ]
 
-let doctors = structuredClone(defaultDoctors)
+let doctors = cloneData(defaultDoctors)
 
 let appointments = []
 
@@ -97,7 +101,7 @@ function loadStore() {
     adminAccount = parsed?.adminAccount || null
     doctors = Array.isArray(parsed?.doctors)
       ? parsed.doctors
-      : structuredClone(defaultDoctors)
+      : cloneData(defaultDoctors)
     appointments = Array.isArray(parsed?.appointments) ? parsed.appointments : []
 
     return true
