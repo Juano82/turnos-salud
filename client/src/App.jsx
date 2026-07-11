@@ -6,18 +6,24 @@ import AdminPage from './pages/AdminPage'
 function App() {
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
+  const isBookingRoute = location.pathname.startsWith('/reservas')
 
   return (
     <>
       <nav className="top-nav">
+        {isBookingRoute ? (
+          <>
+            <span className="active">Reservas</span>
+            <Link to="/admin">Administracion</Link>
+          </>
+        ) : null}
+
         {isAdminRoute ? (
           <>
             <Link to="/reservas">Reservas</Link>
             <span className="active">Administracion</span>
           </>
-        ) : (
-          <span className="active">Reservas</span>
-        )}
+        ) : null}
       </nav>
 
       <Routes>
