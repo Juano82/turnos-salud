@@ -413,7 +413,7 @@ function AdminPage() {
     }
 
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+    window.location.assign(whatsappUrl)
   }
 
   function handleLogout() {
@@ -537,16 +537,35 @@ function AdminPage() {
         ? 'Todos los medicos'
         : doctors.find((doctor) => doctor.id === printForm.doctorId)?.name || 'Medico'
 
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) {
-      setError('No se pudo abrir la ventana de impresion. Revisa el bloqueador de popups.')
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    iframe.setAttribute('aria-hidden', 'true')
+    document.body.appendChild(iframe)
+
+    const frameDocument = iframe.contentWindow?.document
+    if (!frameDocument || !iframe.contentWindow) {
+      document.body.removeChild(iframe)
+      setError('No se pudo preparar la impresion.')
       return
     }
 
-    printWindow.document.write(buildPrintHtml(sortedAppointments, selectedDoctorLabel))
-    printWindow.document.close()
-    printWindow.focus()
-    printWindow.print()
+    frameDocument.open()
+    frameDocument.write(buildPrintHtml(sortedAppointments, selectedDoctorLabel))
+    frameDocument.close()
+
+    iframe.contentWindow.focus()
+    iframe.contentWindow.print()
+
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe)
+      }
+    }, 1000)
 
     setSuccess('Listado listo para imprimir.')
     setShowPrintForm(false)
