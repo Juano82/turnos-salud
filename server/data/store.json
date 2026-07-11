@@ -1,0 +1,104 @@
+{
+  "adminAccount": {
+    "email": "movistarglew@gmail.com",
+    "username": "Juano",
+    "password": "Joaquin2020"
+  },
+  "doctors": [
+    {
+      "id": "doc-1",
+      "name": "Dra. Ana Perez",
+      "specialty": "Clinica Medica",
+      "office": "Consultorio 101",
+      "schedule": [
+        {
+          "day": 1,
+          "start": "09:00",
+          "end": "14:00"
+        },
+        {
+          "day": 3,
+          "start": "09:00",
+          "end": "14:00"
+        },
+        {
+          "day": 5,
+          "start": "09:00",
+          "end": "14:00"
+        }
+      ]
+    },
+    {
+      "id": "doc-2",
+      "name": "Dr. Carlos Gomez",
+      "specialty": "Cardiologia",
+      "office": "Consultorio 202",
+      "schedule": [
+        {
+          "day": 2,
+          "start": "10:00",
+          "end": "17:00"
+        },
+        {
+          "day": 4,
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ]
+    },
+    {
+      "id": "doc-3",
+      "name": "Dra. Sofia Martinez",
+      "specialty": "Pediatria",
+      "office": "Consultorio 303",
+      "schedule": [
+        {
+          "day": 1,
+          "start": "08:00",
+          "end": "13:00"
+        },
+        {
+          "day": 2,
+          "start": "08:00",
+          "end": "13:00"
+        },
+        {
+          "day": 3,
+          "start": "08:00",
+          "end": "13:00"
+        },
+        {
+          "day": 4,
+          "start": "08:00",
+          "end": "13:00"
+        }
+      ]
+    },
+    {
+      "id": "b9f231f4-d28e-47f1-9faf-c3731772f0c9",
+      "name": "Dr, Leandro Diaz",
+      "specialty": "Fonoaudiologia",
+      "office": "404",
+      "schedule": [
+        {
+          "day": 1,
+          "start": "14:00",
+          "end": "19:00"
+        }
+      ]
+    }
+  ],
+  "appointments": [
+    {
+      "id": "459e11da-0fd2-4cc5-9e3d-d87e3fa0a316",
+      "patientName": "Juan",
+      "patientPhone": "5491166337755",
+      "doctorId": "b9f231f4-d28e-47f1-9faf-c3731772f0c9",
+      "date": "2026-07-13",
+      "time": "16:00",
+      "notes": "",
+      "createdAt": "2026-07-11T00:47:04.306Z"
+    }
+  ],
+  "updatedAt": "2026-07-11T00:47:04.306Z"
+}
