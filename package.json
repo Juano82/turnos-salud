@@ -1,0 +1,9 @@
+{
+  "name": "turnos-salud",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "install:all": "npm --prefix client install",
+    "build": "npm --prefix client run build"
+  }
+}
