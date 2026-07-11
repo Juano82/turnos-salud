@@ -27,6 +27,10 @@ function sanitizePhoneForWhatsApp(phone) {
   return `${phone || ''}`.replace(/\D/g, '')
 }
 
+function notifyAdminAuthChanged() {
+  window.dispatchEvent(new Event('admin-auth-changed'))
+}
+
 function AdminPage() {
   const [token, setToken] = useState(localStorage.getItem(ADMIN_TOKEN_KEY) || '')
   const [isAdminConfigured, setIsAdminConfigured] = useState(false)
@@ -58,6 +62,11 @@ function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showPrintForm, setShowPrintForm] = useState(false)
+  const [printForm, setPrintForm] = useState({
+    date: dayjs().format('YYYY-MM-DD'),
+    doctorId: 'all',
+  })
 
   function authHeaders(activeToken) {
     return {
@@ -69,6 +78,7 @@ function AdminPage() {
 
   function clearSessionWithError(message) {
     localStorage.removeItem(ADMIN_TOKEN_KEY)
+    notifyAdminAuthChanged()
     setToken('')
     setAppointments([])
     setDoctors([])
@@ -179,6 +189,7 @@ function AdminPage() {
       const response = await api.post('/api/admin/login', authForm)
       const nextToken = response.data.token
       localStorage.setItem(ADMIN_TOKEN_KEY, nextToken)
+      notifyAdminAuthChanged()
       setToken(nextToken)
       setSuccess('Sesion iniciada.')
       setAuthForm({ username: '', password: '' })
@@ -407,11 +418,138 @@ function AdminPage() {
 
   function handleLogout() {
     localStorage.removeItem(ADMIN_TOKEN_KEY)
+    notifyAdminAuthChanged()
     setToken('')
     setAppointments([])
     setDoctors([])
     setSuccess('Sesion cerrada.')
     setError('')
+  }
+
+  function handlePrintFormChange(event) {
+    const { name, value } = event.target
+    setPrintForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  function getSortedAppointmentsForPrint() {
+    const filtered = appointments.filter((appointment) => {
+      if (appointment.date !== printForm.date) {
+        return false
+      }
+
+      if (printForm.doctorId === 'all') {
+        return true
+      }
+
+      return appointment.doctor?.id === printForm.doctorId
+    })
+
+    return filtered.sort((first, second) => {
+      const firstDoctor = `${first.doctor?.name || ''}`
+      const secondDoctor = `${second.doctor?.name || ''}`
+      const doctorComparison = firstDoctor.localeCompare(secondDoctor, 'es', { sensitivity: 'base' })
+
+      if (doctorComparison !== 0) {
+        return doctorComparison
+      }
+
+      const firstDateTime = `${first.date}T${first.time}`
+      const secondDateTime = `${second.date}T${second.time}`
+      return firstDateTime.localeCompare(secondDateTime)
+    })
+  }
+
+  function buildPrintHtml(sortedAppointments, selectedDoctorLabel) {
+    const dateLabel = dayjs(printForm.date).format('DD/MM/YYYY')
+
+    const rowsHtml = sortedAppointments
+      .map(
+        (appointment) => `
+          <tr>
+            <td>${appointment.doctor?.name || '-'}</td>
+            <td>${appointment.doctor?.specialty || '-'}</td>
+            <td>${appointment.time}</td>
+            <td>${appointment.patientName}</td>
+            <td>${appointment.patientPhone || '-'}</td>
+          </tr>
+        `,
+      )
+      .join('')
+
+    return `
+      <!doctype html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <title>Turnos ${dateLabel}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
+            h1 { margin: 0 0 6px; font-size: 22px; }
+            p { margin: 2px 0; color: #334155; }
+            table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; font-size: 14px; }
+            th { background: #f1f5f9; }
+            .muted { color: #475569; font-size: 13px; margin-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <h1>Listado de turnos</h1>
+          <p><strong>Fecha:</strong> ${dateLabel}</p>
+          <p><strong>Medico:</strong> ${selectedDoctorLabel}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Medico</th>
+                <th>Especialidad</th>
+                <th>Horario</th>
+                <th>Paciente</th>
+                <th>Celular</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          <p class="muted">Ordenado por medico y horario.</p>
+        </body>
+      </html>
+    `
+  }
+
+  function handlePrintAppointments(event) {
+    event.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (!printForm.date) {
+      setError('Selecciona una fecha para imprimir los turnos.')
+      return
+    }
+
+    const sortedAppointments = getSortedAppointmentsForPrint()
+    if (sortedAppointments.length === 0) {
+      setError('No hay turnos para esos filtros.')
+      return
+    }
+
+    const selectedDoctorLabel =
+      printForm.doctorId === 'all'
+        ? 'Todos los medicos'
+        : doctors.find((doctor) => doctor.id === printForm.doctorId)?.name || 'Medico'
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      setError('No se pudo abrir la ventana de impresion. Revisa el bloqueador de popups.')
+      return
+    }
+
+    printWindow.document.write(buildPrintHtml(sortedAppointments, selectedDoctorLabel))
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
+
+    setSuccess('Listado listo para imprimir.')
+    setShowPrintForm(false)
   }
 
   return (
@@ -625,7 +763,60 @@ function AdminPage() {
         {token && (
           <>
             <article className="panel">
-              <h2>Turnos Agendados</h2>
+              <div className="admin-header-row">
+                <h2>Turnos Agendados</h2>
+                <button
+                  type="button"
+                  className="print-btn"
+                  onClick={() => setShowPrintForm((prev) => !prev)}
+                >
+                  Imprimir turnos
+                </button>
+              </div>
+
+              {showPrintForm && (
+                <form onSubmit={handlePrintAppointments} className="print-form">
+                  <div className="inline-fields print-fields">
+                    <label>
+                      Dia a imprimir
+                      <input
+                        type="date"
+                        name="date"
+                        value={printForm.date}
+                        onChange={handlePrintFormChange}
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      Medico
+                      <select
+                        name="doctorId"
+                        value={printForm.doctorId}
+                        onChange={handlePrintFormChange}
+                      >
+                        <option value="all">Todos</option>
+                        {doctors.map((doctor) => (
+                          <option key={doctor.id} value={doctor.id}>
+                            {doctor.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="admin-actions">
+                    <button type="submit">Imprimir</button>
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => setShowPrintForm(false)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              )}
 
               {loading && <p className="info">Cargando turnos...</p>}
 
@@ -636,16 +827,22 @@ function AdminPage() {
               <ul className="appointment-list">
                 {appointments.map((appointment) => (
                   <li key={appointment.id}>
-                    <div>
+                    <div className="appointment-content">
                       <p className="patient">{appointment.patientName}</p>
-                      <p className="meta">Celular: {appointment.patientPhone}</p>
-                      <p className="meta">
-                        {appointment.doctor?.name} | {appointment.doctor?.specialty}
+                      <p className="doctor-highlight">
+                        {appointment.doctor?.name} ({appointment.doctor?.specialty})
                       </p>
                       <p className="meta">
-                        {dayjs(`${appointment.date}T${appointment.time}`).format(
-                          'DD/MM/YYYY HH:mm',
-                        )}
+                        <span className="meta-label">Celular: </span>
+                        <span className="meta-value">{appointment.patientPhone}</span>
+                      </p>
+                      <p className="meta">
+                        <span className="meta-label">Dia y hora: </span>
+                        <span className="meta-value">
+                          {dayjs(`${appointment.date}T${appointment.time}`).format(
+                            'DD/MM/YYYY HH:mm',
+                          )}
+                        </span>
                       </p>
                       {appointment.notes && (
                         <p className="notes">Observaciones: {appointment.notes}</p>
@@ -684,14 +881,7 @@ function AdminPage() {
             </article>
 
             <article className="panel">
-              <div className="admin-header-row">
-                <h2>Gestion de Medicos</h2>
-                <div className="admin-actions">
-                  <button type="button" className="danger" onClick={handleLogout}>
-                    Cerrar sesion
-                  </button>
-                </div>
-              </div>
+              <h2>Gestion de Medicos</h2>
 
               <form onSubmit={handleCreateDoctor} className="form-grid form-section">
                 <h3>Crear medico</h3>
